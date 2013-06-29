@@ -90,6 +90,11 @@ int main(int argc, char* argv[])
    }
 
 
+   printf("Is CFTypeRef base of CFStringRef? %d\n", CoreFoundation::IsBaseOf<CFTypeRef, CFStringRef>::value);
+   printf("Is CFStringRef base of CFMutableStringRef? %d\n", CoreFoundation::IsBaseOf<CFStringRef, CFMutableStringRef>::value);
+   printf("Is CFTypeRef base of CFMutableStringRef? %d\n", CoreFoundation::IsBaseOf<CFTypeRef, CFMutableStringRef>::value);
+   printf("Is CFTypeRef base of CFDataRef? %d\n", CoreFoundation::IsBaseOf<CFTypeRef, CFDataRef>::value);
+   printf("Is CFStringRef base of CFDataRef? %d\n", CoreFoundation::IsBaseOf<CFStringRef, CFDataRef>::value);
 
    return 0;
 }

@@ -27,9 +27,42 @@
 #pragma once
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreFoundation/CFBase.h>
+#include <type_traits>
+#include <utility>
 
 namespace CoreFoundation
 {
+
+// Is 'Base' the immediate parent class of 'Derived'?
+template<typename Base, typename Derived>
+struct IsParentCFType : public std::false_type {};
+
+// What is the parent class type of 'T'?
+template<typename T>
+struct ParentCFType;
+
+template<>
+struct ParentCFType<CFTypeRef> {
+   typedef std::nullptr_t type;
+};
+
+// Recursively search up the class hierarchy to determine if Derived is derived from Base.
+template<typename Base, typename Derived>
+struct IsBaseOf : public std::integral_constant<bool,
+   std::is_same<Base, Derived>::value || IsBaseOf<Base, typename ParentCFType<Derived>::type>::value > {};
+
+template<typename T>
+struct IsBaseOf<T, std::nullptr_t> : public std::false_type {};
+
+template<typename CFBaseTypeRef, typename CFDerivedTypeRef>
+typename std::enable_if<
+   IsBaseOf<CFBaseTypeRef, CFDerivedTypeRef>::value,
+   CFBaseTypeRef
+>::type cf_downcast(CFDerivedTypeRef r)
+{
+   return reinterpret_cast<CFBaseTypeRef>(r);
+}
 
 // CFReference handles RAII semantics for retain/releasing CoreFoundation references.
 //
@@ -39,21 +72,21 @@ class CFReference
 {
 public:
    // Default reference points to nothing.
-   CFReference()
-      : m_ref(nullptr)
+   CFReference() noexcept :
+      m_ref(nullptr)
    {
    }
 
    // Create a CFReference pointing to an existing CoreFoundation object.
-   CFReference(T raw)
-      : m_ref(raw)
+   CFReference(T raw) noexcept :
+      m_ref(raw)
    {
       CFRetain(m_ref);
    }
 
    // Copy an existing CFReference.
-   CFReference(const CFReference& other)
-      : m_ref(other.get())
+   CFReference(const CFReference& other) noexcept :
+      m_ref(other.get())
    {
       // Both ref and other.ref have references to the object, so we need
       // to bump the retain count.
@@ -62,17 +95,17 @@ public:
 
    // Copy an existing CFReference.
    template<typename Y>
-   CFReference(const CFReference<Y>& other)
+   CFReference(const CFReference<Y>& other) noexcept :
       // TODO: This doesn't do any type-checking to make sure that this cast is valid
       // (e.g., we could be casting a CFReference<CFDataRef> to a CFReference<CFStringRef>)
-      : m_ref(reinterpret_cast<T>(other.get()))
+      m_ref(reinterpret_cast<T>(other.get()))
    {
       CFRetain(m_ref);
    }
 
    // Move from an existing CFReference.
-   CFReference(CFReference&& other)
-      : m_ref(other.get())
+   CFReference(CFReference&& other) noexcept :
+      m_ref(other.get())
    {
       // 'other' now no longer holds a reference to the object.
       // We don't need to CFRetain() because the reference count isn't changing.
@@ -81,8 +114,8 @@ public:
 
    // Move from an existing CFReference.
    template<typename Y>
-   CFReference(CFReference<T>&& other)
-      : m_ref(other.get())
+   CFReference(CFReference<T>&& other) noexcept :
+      m_ref(other.get())
    {
       other.m_ref = nullptr;
    }
@@ -93,7 +126,7 @@ public:
       release();
    }
 
-   CFReference& operator=(const CFReference& other)
+   CFReference& operator=(const CFReference& other) noexcept
    {
       if (&other != this)
       {
@@ -105,7 +138,7 @@ public:
    }
 
    template<typename Y>
-   CFReference& operator=(const CFReference<Y>& other)
+   CFReference& operator=(const CFReference<Y>& other) noexcept
    {
       if (&other != this)
       {
@@ -116,7 +149,7 @@ public:
       return *this;
    }
 
-   CFReference& operator=(CFReference&& other)
+   CFReference& operator=(CFReference&& other) noexcept
    {
       release();
       m_ref = other.get();
@@ -126,7 +159,7 @@ public:
    }
 
    template<typename Y>
-   CFReference& operator=(CFReference<Y>&& other)
+   CFReference& operator=(CFReference<Y>&& other) noexcept
    {
       release();
       m_ref = other.get();
@@ -136,7 +169,7 @@ public:
    }
 
    // Get the retain count. Note: @VTPG says this can lie. Don't depend on this for anything important.
-   long use_count() const
+   long use_count() const noexcept
    {
       if (m_ref)
          return CFGetRetainCount(m_ref);
@@ -144,17 +177,17 @@ public:
          return 0;
    }
 
-   explicit operator bool() const
+   explicit operator bool() const noexcept
    {
       return (m_ref != nullptr);
    }
 
-   T get() const
+   T get() const noexcept
    {
       return m_ref;
    }
 
-   void release()
+   void release() noexcept
    {
       if (m_ref)
       {
@@ -171,7 +204,7 @@ private:
 // result of a function creating a new reference (like CFStringCreateCopy), and is therefore a
 // temporary value that needs to be released.
 template<typename T>
-CFReference<T> make_CFReference(T arg)
+CFReference<T> make_CFReference(T arg) noexcept
 {
    CFReference<T> x(arg);
    CFRelease(arg);
@@ -182,13 +215,19 @@ CFReference<T> make_CFReference(T arg)
 // classes don't need to duplicate it.
 class Base
 {
-   operator CFTypeRef() const
+public:
+   operator CFTypeRef() const noexcept
    {
       return m_ref.get();
    }
 
+   CFTypeID type_id() noexcept
+   {
+      return CFGetTypeID(m_ref.get());
+   }
+
 protected:
-   Base() :
+   Base() noexcept :
       m_ref()
    { }
 

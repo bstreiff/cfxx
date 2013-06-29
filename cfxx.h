@@ -42,6 +42,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include "cfxx_base.h"
+#include "cfxx_data.h"
 #include "cfxx_string.h"
 
 #endif // __cfxx_h__
