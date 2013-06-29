@@ -40,49 +40,51 @@ class CFReference
 public:
    // Default reference points to nothing.
    CFReference()
-      : ref(nullptr)
+      : m_ref(nullptr)
    {
    }
 
    // Create a CFReference pointing to an existing CoreFoundation object.
    CFReference(T raw)
-      : ref(raw)
+      : m_ref(raw)
    {
-      CFRetain(ref);
+      CFRetain(m_ref);
    }
 
    // Copy an existing CFReference.
-   CFReference(const CFReference& r)
-      : ref(r.ref)
+   CFReference(const CFReference& other)
+      : m_ref(other.get())
    {
-      // Both ref and r.ref have references to the object, so we need
+      // Both ref and other.ref have references to the object, so we need
       // to bump the retain count.
-      CFRetain(ref);
+      CFRetain(m_ref);
    }
 
    // Copy an existing CFReference.
    template<typename Y>
-   CFReference(const CFReference<Y>& r)
-      : ref(r.ref)
+   CFReference(const CFReference<Y>& other)
+      // TODO: This doesn't do any type-checking to make sure that this cast is valid
+      // (e.g., we could be casting a CFReference<CFDataRef> to a CFReference<CFStringRef>)
+      : m_ref(reinterpret_cast<T>(other.get()))
    {
-      CFRetain(ref);
+      CFRetain(m_ref);
    }
 
    // Move from an existing CFReference.
-   CFReference(CFReference&& r)
-      : ref(r.ref)
+   CFReference(CFReference&& other)
+      : m_ref(other.get())
    {
-      // r now no longer holds a reference to the object.
+      // 'other' now no longer holds a reference to the object.
       // We don't need to CFRetain() because the reference count isn't changing.
-      r.ref = nullptr;
+      other.m_ref = nullptr;
    }
 
    // Move from an existing CFReference.
    template<typename Y>
-   CFReference(CFReference<T>&& r)
-      : ref(r.ref)
+   CFReference(CFReference<T>&& other)
+      : m_ref(other.get())
    {
-      r.ref = nullptr;
+      other.m_ref = nullptr;
    }
 
    // Destroy this CFReference, thus dropping the refcount.
@@ -91,78 +93,78 @@ public:
       release();
    }
 
-   CFReference& operator=(const CFReference& r)
+   CFReference& operator=(const CFReference& other)
    {
-      if (&r != this)
+      if (&other != this)
       {
          release();
-         ref = r.get();
-         CFRetain(ref);
+         m_ref = other.get();
+         CFRetain(m_ref);
       }
       return *this;
    }
 
    template<typename Y>
-   CFReference& operator=(const CFReference<Y>& r)
+   CFReference& operator=(const CFReference<Y>& other)
    {
-      if (&r != this)
+      if (&other != this)
       {
          release();
-         ref = r.ref;
-         CFRetain(ref);
+         m_ref = other.get();
+         CFRetain(m_ref);
       }
       return *this;
    }
 
-   CFReference& operator=(CFReference&& r)
+   CFReference& operator=(CFReference&& other)
    {
       release();
-      ref = r.get();
-      CFRetain(ref);
-      r.release();
+      m_ref = other.get();
+      CFRetain(m_ref);
+      other.release();
       return *this;
    }
 
    template<typename Y>
-   CFReference& operator=(CFReference<Y>&& r)
+   CFReference& operator=(CFReference<Y>&& other)
    {
       release();
-      ref = r.get();
-      CFRetain(ref);
-      r.release();
+      m_ref = other.get();
+      CFRetain(m_ref);
+      other.release();
       return *this;
    }
 
    // Get the retain count. Note: @VTPG says this can lie. Don't depend on this for anything important.
    long use_count() const
    {
-      if (ref)
-         return CFGetRetainCount(ref);
+      if (m_ref)
+         return CFGetRetainCount(m_ref);
       else
          return 0;
    }
 
    explicit operator bool() const
    {
-      return (ref != nullptr);
+      return (m_ref != nullptr);
    }
 
    T get() const
    {
-      return ref;
+      return m_ref;
    }
 
    void release()
    {
-      if (ref)
+      if (m_ref)
       {
-         CFRelease(ref);
-         ref = nullptr;
+         CFRelease(m_ref);
+         m_ref = nullptr;
       }
    }
 
 private:
-   T ref;
+   T m_ref;
 };
 
 // Helper to make a CFReference<T> from a newly-created object. It is assumed that 'arg' is the
@@ -182,10 +184,20 @@ class Base
 {
    operator CFTypeRef() const
    {
-      return _ref.get();
+      return m_ref.get();
    }
+
 protected:
-   CFReference<CFTypeRef> _ref;
+   Base() :
+      m_ref()
+   { }
+
+   template<typename T>
+   Base(const CFReference<T>& ref) :
+      m_ref(ref)
+   { }
+
+   CFReference<CFTypeRef> m_ref;
 };
 
 } // namespace CoreFoundation
