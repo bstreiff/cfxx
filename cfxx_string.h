@@ -35,6 +35,27 @@
 namespace CoreFoundation
 {
 
+class String;
+class MutableString;
+
+template<>
+struct IsParentCFType<CFTypeRef, CFStringRef> : public std::integral_constant<bool, true> {};
+
+template<>
+struct IsParentCFType<CFStringRef, CFMutableStringRef> : public std::integral_constant<bool, true> {};
+
+template<>
+struct ParentCFType<CFStringRef>
+{
+   typedef CFTypeRef type;
+};
+
+template<>
+struct ParentCFType<CFMutableStringRef>
+{
+   typedef CFStringRef type;
+};
+
 class String : public Base
 {
 public:
@@ -85,7 +106,7 @@ public:
          }
       }
 
-      const UniChar& get(CFIndex index) const
+      const UniChar& get(CFIndex index) const noexcept
       {
          if (m_directPtr)
          {
@@ -145,17 +166,17 @@ public:
       typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::reference reference;
       typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::pointer pointer;
       
-      const_iterator(const String* parent, CFIndex position) :
+      const_iterator(const String* parent, CFIndex position) noexcept :
          m_parent(parent),
          m_position(position)
       { }
 
-      const_iterator(const const_iterator& other) :
+      const_iterator(const const_iterator& other) noexcept :
          m_parent(other.m_parent),
          m_position(other.m_position)
       { }
 
-      const_iterator& operator=(const const_iterator& other)
+      const_iterator& operator=(const const_iterator& other) noexcept
       {
          if (&other == this) return *this;
 
@@ -165,90 +186,91 @@ public:
          return *this;
       }
 
-      const_iterator& operator++()
+      const_iterator& operator++() noexcept
       {
          ++m_position;
          return *this;
       }
 
-      const_iterator& operator--()
+      const_iterator& operator--() noexcept
       {
          --m_position;
          return *this;
       }
 
-      const_iterator operator++(int)
+      const_iterator operator++(int) noexcept
       {
          return const_iterator(m_parent, m_position+1);
       }
 
-      const_iterator operator--(int) 
+      const_iterator operator--(int) noexcept
       {
          return const_iterator(m_parent, m_position-1);
       }
 
-      const_iterator operator+(const difference_type& n) const
+      const_iterator operator+(const difference_type& n) const noexcept
       {
          return const_iterator(m_parent, m_position + n);
       }
 
-      const_iterator& operator+=(const difference_type& n)
+      const_iterator& operator+=(const difference_type& n) noexcept
       {
          m_position += n;
          return *this;
       }
 
-      const_iterator operator-(const difference_type& n) const
+      const_iterator operator-(const difference_type& n) const noexcept
       {
          return const_iterator(m_parent, m_position - n);
       }
-      const_iterator& operator-=(const difference_type& n)
+
+      const_iterator& operator-=(const difference_type& n) noexcept
       {
          m_position -= n;
          return *this;
       }
 
-      reference operator*() const
+      reference operator*() const noexcept
       {
          return (*m_parent)[m_position];
       }
 
-      pointer operator->() const
+      pointer operator->() const noexcept
       {
          return &(*m_parent)[m_position];
       }
 
-      reference operator[](const difference_type& n) const
+      reference operator[](const difference_type& n) const noexcept
       {
          return (*m_parent)[m_position + n];
       }
 
-      bool operator==(const const_iterator& other) const
+      bool operator==(const const_iterator& other) const noexcept
       {
          return m_position == other.m_position;
       }
 
-      bool operator!=(const const_iterator& other) const
+      bool operator!=(const const_iterator& other) const noexcept
       {
          return m_position != other.m_position;
       }
 
-      bool operator<(const const_iterator& other) const
+      bool operator<(const const_iterator& other) const noexcept
       {
          return m_position < other.m_position;
       }
 
-      bool operator<=(const const_iterator& other) const
+      bool operator<=(const const_iterator& other) const noexcept
       {
          return m_position <= other.m_position;
       }
 
-      bool operator>(const const_iterator& other) const
+      bool operator>(const const_iterator& other) const noexcept
       {
          return m_position > other.m_position;
       }
 
-      bool operator>=(const const_iterator& other) const
+      bool operator>=(const const_iterator& other) const noexcept
       {
          return m_position >= other.m_position;
       }
@@ -287,27 +309,27 @@ public:
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
-   const_iterator begin() const
+   const_iterator begin() const noexcept
    {
       return const_iterator(this, 0);
    }
 
-   const_iterator end() const
+   const_iterator end() const noexcept
    {
       return const_iterator(this, size());
    }
 
-   const_reverse_iterator rbegin() const
+   const_reverse_iterator rbegin() const noexcept
    {
       return const_reverse_iterator(end());
    }
 
-   const_reverse_iterator rend() const
+   const_reverse_iterator rend() const noexcept
    {
       return const_reverse_iterator(begin());
    }
 
-   const_reference operator[](size_type index) const
+   const_reference operator[](size_type index) const noexcept
    {
       return m_stringAccessor.get(index);
    }
@@ -317,17 +339,17 @@ public:
       return m_stringAccessor.checkedGet(index);
    }
 
-   size_type size() const
+   size_type size() const noexcept
    {
       return CFStringGetLength(getRef());
    }
 
-   size_type length() const
+   size_type length() const noexcept
    {
       return CFStringGetLength(getRef());
    }
 
-   bool empty() const
+   bool empty() const noexcept
    {
       return CFStringGetLength(getRef()) == 0;
    }
@@ -371,9 +393,14 @@ public:
       }
    }
 
-   operator CFStringRef() const
+   operator CFStringRef() const noexcept
    {
       return getRef();
+   }
+
+   static CFTypeID class_type_id() noexcept
+   {
+      return CFStringGetTypeID();
    }
 
 protected:
@@ -383,7 +410,7 @@ protected:
    { }
 
 private:
-   inline CFStringRef getRef() const
+   inline CFStringRef getRef() const noexcept
    {
       return reinterpret_cast<CFStringRef>(m_ref.get());
    }
@@ -393,34 +420,34 @@ private:
 };
 
 
-bool operator<(const String& a, const String& b)
+bool operator<(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareLessThan;
 }
 
-bool operator>(const String& a, const String& b)
+bool operator>(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareGreaterThan;
 }
 
-bool operator==(const String& a, const String& b)
+bool operator==(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareEqualTo;
 }
 
-bool operator<=(const String& a, const String& b)
+bool operator<=(const String& a, const String& b) noexcept
 {
    const auto r = CFStringCompare(a, b, 0);
    return (r == kCFCompareLessThan || r == kCFCompareEqualTo);
 }
 
-bool operator>=(const String& a, const String& b)
+bool operator>=(const String& a, const String& b) noexcept
 {
    const auto r = CFStringCompare(a, b, 0);
    return (r == kCFCompareGreaterThan || r == kCFCompareEqualTo);
 }
 
-bool operator!=(const String& a, const String& b)
+bool operator!=(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) != kCFCompareEqualTo;
 }
@@ -433,40 +460,40 @@ public:
          kCFAllocatorDefault, 0)))
    { }
 
-   MutableString(const String& other) :
+   MutableString(const String& other) noexcept :
       String(make_CFReference(CFStringCreateMutableCopy(
          kCFAllocatorDefault, 0, other)))
    { }
 
-   MutableString(MutableString&& other) :
+   MutableString(MutableString&& other) noexcept :
       String(std::move(other.m_ref))
    { }
 
-   MutableString& append(const String& str)
+   MutableString& append(const String& str) noexcept
    {
       CFStringAppend(getRef(), str);
       return *this;
    }
 
-   MutableString& append(const UniChar* str, size_t n)
+   MutableString& append(const UniChar* str, size_t n) noexcept
    {
       CFStringAppendCharacters(getRef(), str, n);
       return *this;
    }
 
-   MutableString& append(const char* str, CFStringEncoding encoding = kCFStringEncodingUTF8)
+   MutableString& append(const char* str, CFStringEncoding encoding = kCFStringEncodingUTF8) noexcept
    {
       CFStringAppendCString(getRef(), str, encoding);
       return *this;
    }
    
-   operator CFMutableStringRef() const
+   operator CFMutableStringRef() const noexcept
    {
       return getRef();
    }
 
 private:
-   inline CFMutableStringRef getRef() const
+   inline CFMutableStringRef getRef() const noexcept
    {
       return reinterpret_cast<CFMutableStringRef>(const_cast<void *>(m_ref.get()));
    }
