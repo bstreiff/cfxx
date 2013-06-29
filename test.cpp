@@ -35,5 +35,61 @@ int main(int argc, char* argv[])
 
    printf("%s\n", mutableString.to_string().c_str());
 
+   {
+      const char* shortString = "this is a test";
+
+      std::string shortStdStringToTestIteration(shortString);
+      CoreFoundation::String shortCFStringToTestIteration(shortString);
+
+      auto itr1 = shortStdStringToTestIteration.begin();
+      auto itr2 = shortCFStringToTestIteration.begin();
+
+      size_t charsCounted = 0;
+      for (; itr1 != shortStdStringToTestIteration.end() && itr2 != shortCFStringToTestIteration.end(); ++itr1, ++itr2)
+      {
+         if (static_cast<UniChar>(*itr1) != *itr2)
+         {
+            printf("mismatch! %c != %c\n",
+               static_cast<char>(*itr1),
+               static_cast<char>(*itr2));
+         }
+         ++charsCounted;
+      }
+      printf("counted %d characters\n", static_cast<int>(charsCounted));
+   }
+
+   {
+      // Via cupcakeipsum.com. This is a thing that exists. Thank you, internet.
+      const char* longString =
+         "Cupcake ipsum dolor sit amet powder bear claw NERDIES marshmallow. Chupa chups "
+         "sweet roll gummies chocolate topping wafer I love oat cake. Chupa chups carrot "
+         "cake donut halvah sugar plum carrot cake sweet roll dessert. I love chocolate "
+         "cupcake I love I love ice cream biscuit pudding powder. I love chocolate candy "
+         "canes. Jelly gummies pudding chocolate cake sweet roll. Tart cookie toffee "
+         "topping bear claw. Tart chupa chups danish chocolate bar bear claw icing I love "
+         "pudding.";
+
+      std::string longStdStringToTestIteration(longString);
+      CoreFoundation::String longCFStringToTestIteration(longString);
+
+      auto itr1 = longStdStringToTestIteration.begin();
+      auto itr2 = longCFStringToTestIteration.begin();
+
+      size_t charsCounted = 0;
+      for (; itr1 != longStdStringToTestIteration.end() && itr2 != longCFStringToTestIteration.end(); ++itr1, ++itr2)
+      {
+         if (static_cast<UniChar>(*itr1) != *itr2)
+         {
+            printf("mismatch! %c != %c\n",
+               static_cast<char>(*itr1),
+               static_cast<char>(*itr2));
+         }
+         ++charsCounted;
+      }
+      printf("counted %d characters\n", static_cast<int>(charsCounted));
+   }
+
+
+
    return 0;
 }

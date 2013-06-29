@@ -28,7 +28,9 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreFoundation/CFString.h>
+#include <algorithm>
 #include <string>
+#include <vector>
 
 namespace CoreFoundation
 {
@@ -45,42 +47,274 @@ public:
    typedef const UniChar* const_pointer;
    typedef CFIndex size_type;
 
-   String()
+   // This serves essentially the same function as CFStringInlineBuffer, but
+   // doesn't have the macro weirdness that CFString.h has going on with it.
+   class BufferingStringAccessor
    {
-      // I suppose this should be a CFSTR or something?
-      _ref = make_CFReference(CFStringCreateWithCString(
+   public:
+      BufferingStringAccessor(const CFStringRef& stringRef)
+      {
+         // Merely copy the reference; we don't increment the reference count. This
+         // object has undefined behavior if it has a lifetime exceeding the parent
+         // String object.
+         m_stringRef = stringRef;
+         // The string is ostensibly immutable, so the length should not change.
+         m_stringLength = CFStringGetLength(stringRef);
+
+         // This will either return the pointer, or NULL. If non-NULL, no buffering!
+         m_directPtr = CFStringGetCharactersPtr(stringRef);
+         if (m_directPtr == nullptr)
+         {
+            // Alas. Initialize some space.
+            m_buffer.resize(std::min<size_t>(64, m_stringLength));
+         }
+
+         m_bufferBeginPosition = m_bufferEndPosition = 0;
+      }
+
+      BufferingStringAccessor(const BufferingStringAccessor& other) :
+         m_stringRef(other.m_stringRef),
+         m_directPtr(other.m_directPtr),
+         m_stringLength(other.m_stringLength),
+         m_bufferBeginPosition(0),
+         m_bufferEndPosition(0)
+      {
+         if (m_directPtr == nullptr)
+         {
+            m_buffer.resize(std::min<size_t>(64, m_stringLength));
+         }
+      }
+
+      const UniChar& get(CFIndex index) const
+      {
+         if (m_directPtr)
+         {
+            return m_directPtr[index];
+         }
+         else
+         {
+            if (index < m_bufferBeginPosition || index >= m_bufferEndPosition)
+            {
+               // We can't do fast-access, and the index we just accessed is outside
+               // the buffer.
+
+               if ((m_bufferBeginPosition = index - 4) < 0)
+                  m_bufferBeginPosition = 0;
+
+               m_bufferEndPosition = m_bufferBeginPosition + m_buffer.size();
+
+               if (m_bufferEndPosition > m_stringLength)
+                  m_bufferEndPosition = m_stringLength;
+
+               CFStringGetCharacters(
+                  m_stringRef,
+                  CFRangeMake(m_bufferBeginPosition, static_cast<CFIndex>(m_buffer.size())),
+                  m_buffer.data());
+            }
+
+            return m_buffer[index - m_bufferBeginPosition];
+         }
+      }
+
+      const UniChar& checkedGet(CFIndex index) const
+      {
+         if (index < 0 || index >= m_stringLength)
+            throw std::out_of_range("BufferingStringAccessor");
+         return get(index);
+      }
+
+   private:
+      mutable std::vector<UniChar> m_buffer;
+
+      CFStringRef m_stringRef;
+      const UniChar* m_directPtr;
+      CFIndex m_stringLength;
+
+      mutable CFIndex m_bufferBeginPosition;
+      mutable CFIndex m_bufferEndPosition;
+   };
+
+
+   class const_iterator :
+      public std::iterator<std::random_access_iterator_tag, const UniChar>
+   {
+   public:
+      typedef std::random_access_iterator_tag iterator_category;
+      typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::value_type value_type;
+      typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::difference_type difference_type;
+      typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::reference reference;
+      typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::pointer pointer;
+      
+      const_iterator(const String* parent, CFIndex position) :
+         m_parent(parent),
+         m_position(position)
+      { }
+
+      const_iterator(const const_iterator& other) :
+         m_parent(other.m_parent),
+         m_position(other.m_position)
+      { }
+
+      const_iterator& operator=(const const_iterator& other)
+      {
+         if (&other == this) return *this;
+
+         m_parent = other.m_parent;
+         m_position = other.m_position;
+
+         return *this;
+      }
+
+      const_iterator& operator++()
+      {
+         ++m_position;
+         return *this;
+      }
+
+      const_iterator& operator--()
+      {
+         --m_position;
+         return *this;
+      }
+
+      const_iterator operator++(int)
+      {
+         return const_iterator(m_parent, m_position+1);
+      }
+
+      const_iterator operator--(int) 
+      {
+         return const_iterator(m_parent, m_position-1);
+      }
+
+      const_iterator operator+(const difference_type& n) const
+      {
+         return const_iterator(m_parent, m_position + n);
+      }
+
+      const_iterator& operator+=(const difference_type& n)
+      {
+         m_position += n;
+         return *this;
+      }
+
+      const_iterator operator-(const difference_type& n) const
+      {
+         return const_iterator(m_parent, m_position - n);
+      }
+      const_iterator& operator-=(const difference_type& n)
+      {
+         m_position -= n;
+         return *this;
+      }
+
+      reference operator*() const
+      {
+         return (*m_parent)[m_position];
+      }
+
+      pointer operator->() const
+      {
+         return &(*m_parent)[m_position];
+      }
+
+      reference operator[](const difference_type& n) const
+      {
+         return (*m_parent)[m_position + n];
+      }
+
+      bool operator==(const const_iterator& other) const
+      {
+         return m_position == other.m_position;
+      }
+
+      bool operator!=(const const_iterator& other) const
+      {
+         return m_position != other.m_position;
+      }
+
+      bool operator<(const const_iterator& other) const
+      {
+         return m_position < other.m_position;
+      }
+
+      bool operator<=(const const_iterator& other) const
+      {
+         return m_position <= other.m_position;
+      }
+
+      bool operator>(const const_iterator& other) const
+      {
+         return m_position > other.m_position;
+      }
+
+      bool operator>=(const const_iterator& other) const
+      {
+         return m_position >= other.m_position;
+      }
+
+   protected:
+      const String* m_parent;
+      CFIndex m_position;
+   };
+
+   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+
+   String() :
+      Base(make_CFReference(CFStringCreateWithCString(
          kCFAllocatorDefault,
          "",
-         kCFStringEncodingUTF8));
-   }
+         kCFStringEncodingUTF8))),
+      m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
+   { }
 
-   String(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8)
-   {
-      _ref = make_CFReference(CFStringCreateWithCString(
+   String(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
+      Base(make_CFReference(CFStringCreateWithCString(
          kCFAllocatorDefault,
          s,
-         encoding));
-   }
+         encoding))),
+      m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
+   { }
 
-   String(const String& other)
-   {
+   String(const String& other) :
       // Strings are immutable, so we can share references.
-      _ref = other._ref;
+      Base(other.m_ref),
+      m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
+   { }
+
+   String(String&& other) :
+      Base(std::move(other.m_ref)),
+      m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
+   { }
+
+   const_iterator begin() const
+   {
+      return const_iterator(this, 0);
    }
 
-   String(String&& other)
+   const_iterator end() const
    {
-      _ref = std::move(other._ref);
+      return const_iterator(this, size());
    }
 
-   // TODO: support begin()/end()...
-   // The 'easy' way would be to just have pointers into CFStringGetCharactersPtr but that's
-   // not guaranteed to work... I think the 'real' way is going to be to define an iterator
-   // class that uses CFStringInitInlineBuffer/CFStringGetCharacterFromInlineBuffer.
-
-   UniChar operator[](size_type index) const
+   const_reverse_iterator rbegin() const
    {
-      return CFStringGetCharacterAtIndex(getRef(), index);
+      return const_reverse_iterator(end());
+   }
+
+   const_reverse_iterator rend() const
+   {
+      return const_reverse_iterator(begin());
+   }
+
+   const_reference operator[](size_type index) const
+   {
+      return m_stringAccessor.get(index);
+   }
+
+   const_reference at(size_type index) const
+   {
+      return m_stringAccessor.checkedGet(index);
    }
 
    size_type size() const
@@ -142,11 +376,19 @@ public:
       return getRef();
    }
 
+protected:
+   String(const CFReference<CFStringRef>& ref) :
+      Base(ref),
+      m_stringAccessor(ref.get())
+   { }
+
 private:
    inline CFStringRef getRef() const
    {
-      return reinterpret_cast<CFStringRef>(_ref.get());
+      return reinterpret_cast<CFStringRef>(m_ref.get());
    }
+
+   BufferingStringAccessor m_stringAccessor;
    
 };
 
@@ -186,22 +428,19 @@ bool operator!=(const String& a, const String& b)
 class MutableString : public String
 {
 public:
-   MutableString()
-   {
-      _ref = make_CFReference(CFStringCreateMutable(
-         kCFAllocatorDefault, 0));
-   }
+   MutableString() :
+      String(make_CFReference(CFStringCreateMutable(
+         kCFAllocatorDefault, 0)))
+   { }
 
-   MutableString(const String& other)
-   {
-      _ref = make_CFReference(CFStringCreateMutableCopy(
-         kCFAllocatorDefault, 0, other));
-   }
+   MutableString(const String& other) :
+      String(make_CFReference(CFStringCreateMutableCopy(
+         kCFAllocatorDefault, 0, other)))
+   { }
 
-   MutableString(MutableString&& other)
-   {
-      _ref = std::move(other._ref);
-   }
+   MutableString(MutableString&& other) :
+      String(std::move(other.m_ref))
+   { }
 
    MutableString& append(const String& str)
    {
@@ -229,7 +468,7 @@ public:
 private:
    inline CFMutableStringRef getRef() const
    {
-      return reinterpret_cast<CFMutableStringRef>(const_cast<void *>(_ref.get()));
+      return reinterpret_cast<CFMutableStringRef>(const_cast<void *>(m_ref.get()));
    }
 };
 
