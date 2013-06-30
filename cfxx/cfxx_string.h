@@ -283,18 +283,20 @@ public:
    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
    inline String() :
-      Base(make_CFReference(CFStringCreateWithCString(
-         kCFAllocatorDefault,
-         "",
-         kCFStringEncodingUTF8))),
+      Base(makeCFReferenceFromCopyOrCreate(
+         CFStringCreateWithCString(
+            kCFAllocatorDefault,
+            "",
+            kCFStringEncodingUTF8))),
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
    inline String(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
-      Base(make_CFReference(CFStringCreateWithCString(
-         kCFAllocatorDefault,
-         s,
-         encoding))),
+      Base(makeCFReferenceFromCopyOrCreate(
+         CFStringCreateWithCString(
+            kCFAllocatorDefault,
+            s,
+            encoding))),
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
@@ -367,10 +369,8 @@ public:
          // Well, that didn't work, so we have to do it the hard way.
          std::string buffer;
 
-         // We need to figure out how long a buffer we need. So first, we need a range representing the whole string.
-         CFRange range;
-         range.location = 0;
-         range.length = CFStringGetLength(getRef());
+         // Get the string length.
+         CFRange range = CFRangeMake(0, CFStringGetLength(getRef()));
 
          // Now, use GetBytes to find the buffer length.
          CFIndex requiredBufferSize = 0;
@@ -383,11 +383,20 @@ public:
             nullptr,
             0,
             &requiredBufferSize);
-         // Make large enough for that, plus terminating NULL.
-         buffer.resize(requiredBufferSize + 1);
+         // Make large enough for that.
+         buffer.resize(requiredBufferSize);
 
-         // And then, fill the std::string.
-         CFStringGetCString(getRef(), const_cast<char*>(buffer.data()), static_cast<CFIndex>(buffer.size()), encoding);
+         // And then, fill the std::string. We use CFStringGetBytes and not CFStringGetCString, because
+         // we don't want the null terminator (std::string handles that).
+         CFStringGetBytes(
+            getRef(),
+            range,
+            encoding,
+            0,
+            false,
+            reinterpret_cast<UInt8*>(const_cast<char*>(buffer.data())),
+            static_cast<CFIndex>(buffer.size()),
+            nullptr);
 
          return buffer;
       }
@@ -456,19 +465,20 @@ class MutableString : public String
 {
 public:
    inline MutableString() :
-      String(make_CFReference(CFStringCreateMutable(
-         kCFAllocatorDefault, 0)))
+      String(makeCFReferenceFromCopyOrCreate(
+         CFStringCreateMutable(
+            kCFAllocatorDefault, 0)))
    { }
 
    // This one is kind of annoying, there isn't a CFStringCreateMutableWithCString,
    // so we have to compose it ourselves.
    inline MutableString(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
       String(
-         make_CFReference(
+         makeCFReferenceFromCopyOrCreate(
             CFStringCreateMutableCopy(
                kCFAllocatorDefault,
                0,
-               make_CFReference(
+               makeCFReferenceFromCopyOrCreate(
                   CFStringCreateWithCString(
                      kCFAllocatorDefault,
                      s,
@@ -476,8 +486,9 @@ public:
    { }
 
    inline MutableString(const String& other) noexcept :
-      String(make_CFReference(CFStringCreateMutableCopy(
-         kCFAllocatorDefault, 0, other)))
+      String(makeCFReferenceFromCopyOrCreate(
+         CFStringCreateMutableCopy(
+            kCFAllocatorDefault, 0, other)))
    { }
 
    inline MutableString(MutableString&& other) noexcept :

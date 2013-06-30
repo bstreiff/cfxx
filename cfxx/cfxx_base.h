@@ -204,7 +204,7 @@ private:
 // result of a function creating a new reference (like CFStringCreateCopy), and is therefore a
 // temporary value that needs to be released.
 template<typename T>
-inline CFReference<T> make_CFReference(T arg) noexcept
+inline CFReference<T> makeCFReferenceFromCopyOrCreate(T arg) noexcept
 {
    CFReference<T> x(arg);
    CFRelease(arg);
