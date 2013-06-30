@@ -6,7 +6,7 @@ This is an experiment to make them better, since I couldn't find any C++ CF bind
 Headers you might be interested in are under 'cfxx'.
 
 There are component tests! You can run them with:
-   mkdir build
-   cd build
-   cmake ..
-   make
+- mkdir build
+- cd build
+- cmake ..
+- make
