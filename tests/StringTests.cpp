@@ -88,3 +88,80 @@ TEST(StringTests, LongStringIteration)
    }
    ASSERT_EQ(longStdString.size(), charsCounted);
 }
+
+TEST(StringTests, ReverseIteration)
+{
+   const char* testString =
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. "
+      "Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh "
+      "elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed "
+      "augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent "
+      "taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. "
+      "Curabitur sodales ligula in libero. Sed dignissim lacinia nunc.";
+
+   const std::string testStdString = testString;
+   CoreFoundation::String testCFString = testString;
+
+   auto itr1 = testStdString.rbegin();
+   auto itr2 = testCFString.rbegin();
+
+   size_t charsCounted = 0;
+   for (; itr1 != testStdString.rend() && itr2 != testCFString.rend(); ++itr1, ++itr2)
+   {
+      ASSERT_EQ(static_cast<UniChar>(*itr1), *itr2);
+      ++charsCounted;
+   }
+   ASSERT_EQ(testStdString.size(), charsCounted);
+}
+
+TEST(StringTests, StringConversion)
+{
+   const char* testString = "this is a test";
+
+   const std::string testStdString = testString;
+   CoreFoundation::String testCFString = testString;
+
+   const std::string convertedString = testCFString.to_string();
+
+   ASSERT_EQ(testStdString, convertedString);
+}
+
+TEST(StringTests, StringComparison)
+{
+   CoreFoundation::String a = "aaa";
+   CoreFoundation::String b = "bbb";
+   CoreFoundation::String c = "ccc";
+
+   ASSERT_TRUE(a < b);
+   ASSERT_TRUE(a <= b);
+   ASSERT_TRUE(a == a);
+   ASSERT_TRUE(a != b);
+   ASSERT_TRUE(b != c);
+   ASSERT_TRUE(c > a);
+   ASSERT_TRUE(c >= a);
+
+   ASSERT_FALSE(a == b);
+   ASSERT_FALSE(a > b);
+   ASSERT_FALSE(b >= c);
+   ASSERT_FALSE(c != c);
+}
+
+TEST(StringTests, MutableStringAppend)
+{
+   const char* prefix = "foo";
+   const char* suffix = "bar";
+
+   CoreFoundation::String foobar = "foobar";
+   CoreFoundation::String bar = "bar";
+
+   CoreFoundation::MutableString a = prefix;
+   a.append(suffix);
+
+   ASSERT_EQ(foobar, a);
+
+   CoreFoundation::MutableString b = prefix;
+   b.append(bar);
+
+   ASSERT_EQ(foobar, b);
+}
+

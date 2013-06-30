@@ -73,10 +73,11 @@ public:
    { }
 
    inline Data(const UInt8* bytes, size_type length) noexcept :
-      Base(make_CFReference(CFDataCreate(
-         kCFAllocatorDefault,
-         reinterpret_cast<const UInt8*>(bytes),
-         length)))
+      Base(makeCFReferenceFromCopyOrCreate(
+         CFDataCreate(
+            kCFAllocatorDefault,
+            reinterpret_cast<const UInt8*>(bytes),
+            length)))
    { }
 
    inline Data(const Data& other) noexcept :
@@ -173,8 +174,9 @@ public:
    { }
 
    inline MutableData(const Data& other) noexcept :
-      Data(make_CFReference(CFDataCreateMutableCopy(
-         kCFAllocatorDefault, 0, other)))
+      Data(makeCFReferenceFromCopyOrCreate(
+         CFDataCreateMutableCopy(
+            kCFAllocatorDefault, 0, other)))
    { }
 
    inline MutableData(MutableData&& other) noexcept :
