@@ -68,90 +68,90 @@ public:
    typedef const_pointer                         const_iterator;
    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-   Data() noexcept :
+   inline Data() noexcept :
       Base()
    { }
 
-   Data(const UInt8* bytes, size_type length) noexcept :
+   inline Data(const UInt8* bytes, size_type length) noexcept :
       Base(make_CFReference(CFDataCreate(
          kCFAllocatorDefault,
          reinterpret_cast<const UInt8*>(bytes),
          length)))
    { }
 
-   Data(const Data& other) noexcept :
+   inline Data(const Data& other) noexcept :
       // CFDatas are immutable, so we can share references.
       Base(other.m_ref)
    { }
 
-   Data(Data&& other) noexcept :
+   inline Data(Data&& other) noexcept :
       Base(std::move(other.m_ref))
    { }
 
-   const_iterator begin() const noexcept
+   inline const_iterator begin() const noexcept
    {
       return CFDataGetBytePtr(getRef());
    }
 
-   const_iterator end() const noexcept
+   inline const_iterator end() const noexcept
    {
       return CFDataGetBytePtr(getRef()) + CFDataGetLength(getRef());
    }
 
-   const_reverse_iterator rbegin() const noexcept
+   inline const_reverse_iterator rbegin() const noexcept
    {
       return const_reverse_iterator(end());
    }
 
-   const_reverse_iterator rend() const noexcept
+   inline const_reverse_iterator rend() const noexcept
    {
       return const_reverse_iterator(begin());
    }
 
-   const_reference operator[](size_type index) const noexcept
+   inline const_reference operator[](size_type index) const noexcept
    {
       return *(CFDataGetBytePtr(getRef()) + index);
    }
 
-   const_reference at(size_type index) const
+   inline const_reference at(size_type index) const
    {
       if (index < 0 || index >= size())
          throw std::out_of_range("Data");
       return operator[](index);
    }
 
-   const_pointer data() const noexcept
+   inline const_pointer data() const noexcept
    {
       return CFDataGetBytePtr(getRef());
    }
 
-   size_type size() const noexcept
+   inline size_type size() const noexcept
    {
       return CFDataGetLength(getRef());
    }
 
-   size_type length() const noexcept
+   inline size_type length() const noexcept
    {
       return CFDataGetLength(getRef());
    }
 
-   bool empty() const noexcept
+   inline bool empty() const noexcept
    {
       return CFDataGetLength(getRef()) == 0;
    }
 
-   operator CFDataRef() const noexcept
+   inline operator CFDataRef() const noexcept
    {
       return getRef();
    }
 
-   static CFTypeID class_type_id()
+   inline static CFTypeID class_type_id()
    {
       return CFDataGetTypeID();
    }
 
 protected:
-   Data(const CFReference<CFDataRef>& ref) :
+   inline Data(const CFReference<CFDataRef>& ref) :
       Base(ref)
    { }
 
@@ -168,31 +168,31 @@ public:
    typedef pointer                         iterator;
    typedef std::reverse_iterator<iterator> reverse_iterator;
 
-   MutableData() noexcept :
+   inline MutableData() noexcept :
       Data()
    { }
 
-   MutableData(const Data& other) noexcept :
+   inline MutableData(const Data& other) noexcept :
       Data(make_CFReference(CFDataCreateMutableCopy(
          kCFAllocatorDefault, 0, other)))
    { }
 
-   MutableData(MutableData&& other) noexcept :
+   inline MutableData(MutableData&& other) noexcept :
       Data(std::move(other.m_ref))
    { }
 
-   MutableData& append(const UInt8* bytes, size_t n) noexcept
+   inline MutableData& append(const UInt8* bytes, size_t n) noexcept
    {
       CFDataAppendBytes(getRef(), bytes, n);
       return *this;
    }
 
-   MutableData& append(const Data& other) noexcept
+   inline MutableData& append(const Data& other) noexcept
    {
       return append(other.data(), other.size());
    }
 
-   void erase(iterator pos) noexcept
+   inline void erase(iterator pos) noexcept
    {
       CFDataDeleteBytes(getRef(),
          CFRangeMake(
@@ -200,7 +200,7 @@ public:
             /* length */ 1));
    }
 
-   void erase(const_iterator pos) noexcept
+   inline void erase(const_iterator pos) noexcept
    {
       CFDataDeleteBytes(getRef(),
          CFRangeMake(
@@ -208,7 +208,7 @@ public:
             /* length */ 1));
    }
 
-   void erase(iterator first, iterator last) noexcept
+   inline void erase(iterator first, iterator last) noexcept
    {
       CFDataDeleteBytes(getRef(),
          CFRangeMake(
@@ -216,7 +216,7 @@ public:
             /* length */ static_cast<CFIndex>(last - first)));
    }
 
-   void erase(const_iterator first, const_iterator last) noexcept
+   inline void erase(const_iterator first, const_iterator last) noexcept
    {
       CFDataDeleteBytes(getRef(),
          CFRangeMake(
@@ -224,49 +224,49 @@ public:
             /* length */ static_cast<CFIndex>(last - first)));
    }
 
-   iterator begin() noexcept
+   inline iterator begin() noexcept
    {
       return CFDataGetMutableBytePtr(getRef());
    }
 
-   iterator end() noexcept
+   inline iterator end() noexcept
    {
       return CFDataGetMutableBytePtr(getRef()) + CFDataGetLength(getRef());
    }
 
-   reverse_iterator rbegin() noexcept
+   inline reverse_iterator rbegin() noexcept
    {
       return reverse_iterator(end());
    }
 
-   reverse_iterator rend() noexcept
+   inline reverse_iterator rend() noexcept
    {
       return reverse_iterator(begin());
    }
 
-   reference operator[](size_type index) noexcept
+   inline reference operator[](size_type index) noexcept
    {
       return *(CFDataGetMutableBytePtr(getRef()) + index);
    }
 
-   reference at(size_type index)
+   inline reference at(size_type index)
    {
       if (index < 0 || index >= size())
          throw std::out_of_range("MutableData");
       return operator[](index);
    }
 
-   pointer data() noexcept
+   inline pointer data() noexcept
    {
       return CFDataGetMutableBytePtr(getRef());
    }
 
-   void resize(size_type n) noexcept
+   inline void resize(size_type n) noexcept
    {
       CFDataSetLength(getRef(), n);
    }
    
-   operator CFMutableDataRef() const noexcept
+   inline operator CFMutableDataRef() const noexcept
    {
       return getRef();
    }

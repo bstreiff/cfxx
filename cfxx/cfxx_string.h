@@ -73,7 +73,7 @@ public:
    class BufferingStringAccessor
    {
    public:
-      BufferingStringAccessor(const CFStringRef& stringRef)
+      inline BufferingStringAccessor(const CFStringRef& stringRef)
       {
          // Merely copy the reference; we don't increment the reference count. This
          // object has undefined behavior if it has a lifetime exceeding the parent
@@ -93,7 +93,7 @@ public:
          m_bufferBeginPosition = m_bufferEndPosition = 0;
       }
 
-      BufferingStringAccessor(const BufferingStringAccessor& other) :
+      inline BufferingStringAccessor(const BufferingStringAccessor& other) :
          m_stringRef(other.m_stringRef),
          m_directPtr(other.m_directPtr),
          m_stringLength(other.m_stringLength),
@@ -106,7 +106,7 @@ public:
          }
       }
 
-      const UniChar& get(CFIndex index) const noexcept
+      inline const UniChar& get(CFIndex index) const noexcept
       {
          if (m_directPtr)
          {
@@ -137,7 +137,7 @@ public:
          }
       }
 
-      const UniChar& checkedGet(CFIndex index) const
+      inline const UniChar& checkedGet(CFIndex index) const
       {
          if (index < 0 || index >= m_stringLength)
             throw std::out_of_range("BufferingStringAccessor");
@@ -166,17 +166,17 @@ public:
       typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::reference reference;
       typedef typename std::iterator<std::random_access_iterator_tag, const UniChar>::pointer pointer;
       
-      const_iterator(const String* parent, CFIndex position) noexcept :
+      inline const_iterator(const String* parent, CFIndex position) noexcept :
          m_parent(parent),
          m_position(position)
       { }
 
-      const_iterator(const const_iterator& other) noexcept :
+      inline const_iterator(const const_iterator& other) noexcept :
          m_parent(other.m_parent),
          m_position(other.m_position)
       { }
 
-      const_iterator& operator=(const const_iterator& other) noexcept
+      inline const_iterator& operator=(const const_iterator& other) noexcept
       {
          if (&other == this) return *this;
 
@@ -186,91 +186,91 @@ public:
          return *this;
       }
 
-      const_iterator& operator++() noexcept
+      inline const_iterator& operator++() noexcept
       {
          ++m_position;
          return *this;
       }
 
-      const_iterator& operator--() noexcept
+      inline const_iterator& operator--() noexcept
       {
          --m_position;
          return *this;
       }
 
-      const_iterator operator++(int) noexcept
+      inline const_iterator operator++(int) noexcept
       {
          return const_iterator(m_parent, m_position+1);
       }
 
-      const_iterator operator--(int) noexcept
+      inline const_iterator operator--(int) noexcept
       {
          return const_iterator(m_parent, m_position-1);
       }
 
-      const_iterator operator+(const difference_type& n) const noexcept
+      inline const_iterator operator+(const difference_type& n) const noexcept
       {
          return const_iterator(m_parent, m_position + n);
       }
 
-      const_iterator& operator+=(const difference_type& n) noexcept
+      inline const_iterator& operator+=(const difference_type& n) noexcept
       {
          m_position += n;
          return *this;
       }
 
-      const_iterator operator-(const difference_type& n) const noexcept
+      inline const_iterator operator-(const difference_type& n) const noexcept
       {
          return const_iterator(m_parent, m_position - n);
       }
 
-      const_iterator& operator-=(const difference_type& n) noexcept
+      inline const_iterator& operator-=(const difference_type& n) noexcept
       {
          m_position -= n;
          return *this;
       }
 
-      reference operator*() const noexcept
+      inline reference operator*() const noexcept
       {
          return (*m_parent)[m_position];
       }
 
-      pointer operator->() const noexcept
+      inline pointer operator->() const noexcept
       {
          return &(*m_parent)[m_position];
       }
 
-      reference operator[](const difference_type& n) const noexcept
+      inline reference operator[](const difference_type& n) const noexcept
       {
          return (*m_parent)[m_position + n];
       }
 
-      bool operator==(const const_iterator& other) const noexcept
+      inline bool operator==(const const_iterator& other) const noexcept
       {
          return m_position == other.m_position;
       }
 
-      bool operator!=(const const_iterator& other) const noexcept
+      inline bool operator!=(const const_iterator& other) const noexcept
       {
          return m_position != other.m_position;
       }
 
-      bool operator<(const const_iterator& other) const noexcept
+      inline bool operator<(const const_iterator& other) const noexcept
       {
          return m_position < other.m_position;
       }
 
-      bool operator<=(const const_iterator& other) const noexcept
+      inline bool operator<=(const const_iterator& other) const noexcept
       {
          return m_position <= other.m_position;
       }
 
-      bool operator>(const const_iterator& other) const noexcept
+      inline bool operator>(const const_iterator& other) const noexcept
       {
          return m_position > other.m_position;
       }
 
-      bool operator>=(const const_iterator& other) const noexcept
+      inline bool operator>=(const const_iterator& other) const noexcept
       {
          return m_position >= other.m_position;
       }
@@ -282,7 +282,7 @@ public:
 
    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
-   String() :
+   inline String() :
       Base(make_CFReference(CFStringCreateWithCString(
          kCFAllocatorDefault,
          "",
@@ -290,7 +290,7 @@ public:
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
-   String(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
+   inline String(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
       Base(make_CFReference(CFStringCreateWithCString(
          kCFAllocatorDefault,
          s,
@@ -298,63 +298,63 @@ public:
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
-   String(const String& other) :
+   inline String(const String& other) :
       // Strings are immutable, so we can share references.
       Base(other.m_ref),
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
-   String(String&& other) :
+   inline String(String&& other) :
       Base(std::move(other.m_ref)),
       m_stringAccessor(reinterpret_cast<CFStringRef>(m_ref.get()))
    { }
 
-   const_iterator begin() const noexcept
+   inline const_iterator begin() const noexcept
    {
       return const_iterator(this, 0);
    }
 
-   const_iterator end() const noexcept
+   inline const_iterator end() const noexcept
    {
       return const_iterator(this, size());
    }
 
-   const_reverse_iterator rbegin() const noexcept
+   inline const_reverse_iterator rbegin() const noexcept
    {
       return const_reverse_iterator(end());
    }
 
-   const_reverse_iterator rend() const noexcept
+   inline const_reverse_iterator rend() const noexcept
    {
       return const_reverse_iterator(begin());
    }
 
-   const_reference operator[](size_type index) const noexcept
+   inline const_reference operator[](size_type index) const noexcept
    {
       return m_stringAccessor.get(index);
    }
 
-   const_reference at(size_type index) const
+   inline const_reference at(size_type index) const
    {
       return m_stringAccessor.checkedGet(index);
    }
 
-   size_type size() const noexcept
+   inline size_type size() const noexcept
    {
       return CFStringGetLength(getRef());
    }
 
-   size_type length() const noexcept
+   inline size_type length() const noexcept
    {
       return CFStringGetLength(getRef());
    }
 
-   bool empty() const noexcept
+   inline bool empty() const noexcept
    {
       return CFStringGetLength(getRef()) == 0;
    }
 
-   std::string to_string(CFStringEncoding encoding = kCFStringEncodingUTF8) const
+   inline std::string to_string(CFStringEncoding encoding = kCFStringEncodingUTF8) const
    {
       // First, try the fast approach.
       const char* strPtr = CFStringGetCStringPtr(getRef(), encoding);
@@ -393,18 +393,18 @@ public:
       }
    }
 
-   operator CFStringRef() const noexcept
+   inline operator CFStringRef() const noexcept
    {
       return getRef();
    }
 
-   static CFTypeID class_type_id() noexcept
+   inline static CFTypeID class_type_id() noexcept
    {
       return CFStringGetTypeID();
    }
 
 protected:
-   String(const CFReference<CFStringRef>& ref) :
+   inline String(const CFReference<CFStringRef>& ref) :
       Base(ref),
       m_stringAccessor(ref.get())
    { }
@@ -420,34 +420,34 @@ private:
 };
 
 
-bool operator<(const String& a, const String& b) noexcept
+inline bool operator<(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareLessThan;
 }
 
-bool operator>(const String& a, const String& b) noexcept
+inline bool operator>(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareGreaterThan;
 }
 
-bool operator==(const String& a, const String& b) noexcept
+inline bool operator==(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) == kCFCompareEqualTo;
 }
 
-bool operator<=(const String& a, const String& b) noexcept
+inline bool operator<=(const String& a, const String& b) noexcept
 {
    const auto r = CFStringCompare(a, b, 0);
    return (r == kCFCompareLessThan || r == kCFCompareEqualTo);
 }
 
-bool operator>=(const String& a, const String& b) noexcept
+inline bool operator>=(const String& a, const String& b) noexcept
 {
    const auto r = CFStringCompare(a, b, 0);
    return (r == kCFCompareGreaterThan || r == kCFCompareEqualTo);
 }
 
-bool operator!=(const String& a, const String& b) noexcept
+inline bool operator!=(const String& a, const String& b) noexcept
 {
    return CFStringCompare(a, b, 0) != kCFCompareEqualTo;
 }
@@ -455,39 +455,54 @@ bool operator!=(const String& a, const String& b) noexcept
 class MutableString : public String
 {
 public:
-   MutableString() :
+   inline MutableString() :
       String(make_CFReference(CFStringCreateMutable(
          kCFAllocatorDefault, 0)))
    { }
 
-   MutableString(const String& other) noexcept :
+   // This one is kind of annoying, there isn't a CFStringCreateMutableWithCString,
+   // so we have to compose it ourselves.
+   inline MutableString(const char* s, CFStringEncoding encoding = kCFStringEncodingUTF8) :
+      String(
+         make_CFReference(
+            CFStringCreateMutableCopy(
+               kCFAllocatorDefault,
+               0,
+               make_CFReference(
+                  CFStringCreateWithCString(
+                     kCFAllocatorDefault,
+                     s,
+                     encoding)).get())))
+   { }
+
+   inline MutableString(const String& other) noexcept :
       String(make_CFReference(CFStringCreateMutableCopy(
          kCFAllocatorDefault, 0, other)))
    { }
 
-   MutableString(MutableString&& other) noexcept :
+   inline MutableString(MutableString&& other) noexcept :
       String(std::move(other.m_ref))
    { }
 
-   MutableString& append(const String& str) noexcept
+   inline MutableString& append(const String& str) noexcept
    {
       CFStringAppend(getRef(), str);
       return *this;
    }
 
-   MutableString& append(const UniChar* str, size_t n) noexcept
+   inline MutableString& append(const UniChar* str, size_t n) noexcept
    {
       CFStringAppendCharacters(getRef(), str, n);
       return *this;
    }
 
-   MutableString& append(const char* str, CFStringEncoding encoding = kCFStringEncodingUTF8) noexcept
+   inline MutableString& append(const char* str, CFStringEncoding encoding = kCFStringEncodingUTF8) noexcept
    {
       CFStringAppendCString(getRef(), str, encoding);
       return *this;
    }
    
-   operator CFMutableStringRef() const noexcept
+   inline operator CFMutableStringRef() const noexcept
    {
       return getRef();
    }

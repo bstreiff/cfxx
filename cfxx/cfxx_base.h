@@ -56,7 +56,7 @@ template<typename T>
 struct IsBaseOf<T, std::nullptr_t> : public std::false_type {};
 
 template<typename CFBaseTypeRef, typename CFDerivedTypeRef>
-typename std::enable_if<
+inline typename std::enable_if<
    IsBaseOf<CFBaseTypeRef, CFDerivedTypeRef>::value,
    CFBaseTypeRef
 >::type cf_downcast(CFDerivedTypeRef r)
@@ -72,13 +72,13 @@ class CFReference
 {
 public:
    // Default reference points to nothing.
-   CFReference() noexcept :
+   inline CFReference() noexcept :
       m_ref(nullptr)
    {
    }
 
    // Create a CFReference pointing to an existing CoreFoundation object.
-   CFReference(T raw) noexcept :
+   inline CFReference(T raw) noexcept :
       m_ref(raw)
    {
       CFRetain(m_ref);
@@ -95,7 +95,7 @@ public:
 
    // Copy an existing CFReference.
    template<typename Y>
-   CFReference(const CFReference<Y>& other) noexcept :
+   inline CFReference(const CFReference<Y>& other) noexcept :
       // TODO: This doesn't do any type-checking to make sure that this cast is valid
       // (e.g., we could be casting a CFReference<CFDataRef> to a CFReference<CFStringRef>)
       m_ref(reinterpret_cast<T>(other.get()))
@@ -104,7 +104,7 @@ public:
    }
 
    // Move from an existing CFReference.
-   CFReference(CFReference&& other) noexcept :
+   inline CFReference(CFReference&& other) noexcept :
       m_ref(other.get())
    {
       // 'other' now no longer holds a reference to the object.
@@ -114,19 +114,19 @@ public:
 
    // Move from an existing CFReference.
    template<typename Y>
-   CFReference(CFReference<T>&& other) noexcept :
+   inline CFReference(CFReference<T>&& other) noexcept :
       m_ref(other.get())
    {
       other.m_ref = nullptr;
    }
 
    // Destroy this CFReference, thus dropping the refcount.
-   ~CFReference()
+   inline ~CFReference()
    {
       release();
    }
 
-   CFReference& operator=(const CFReference& other) noexcept
+   inline CFReference& operator=(const CFReference& other) noexcept
    {
       if (&other != this)
       {
@@ -138,7 +138,7 @@ public:
    }
 
    template<typename Y>
-   CFReference& operator=(const CFReference<Y>& other) noexcept
+   inline CFReference& operator=(const CFReference<Y>& other) noexcept
    {
       if (&other != this)
       {
@@ -149,7 +149,7 @@ public:
       return *this;
    }
 
-   CFReference& operator=(CFReference&& other) noexcept
+   inline CFReference& operator=(CFReference&& other) noexcept
    {
       release();
       m_ref = other.get();
@@ -159,7 +159,7 @@ public:
    }
 
    template<typename Y>
-   CFReference& operator=(CFReference<Y>&& other) noexcept
+   inline CFReference& operator=(CFReference<Y>&& other) noexcept
    {
       release();
       m_ref = other.get();
@@ -169,7 +169,7 @@ public:
    }
 
    // Get the retain count. Note: @VTPG says this can lie. Don't depend on this for anything important.
-   long use_count() const noexcept
+   inline long use_count() const noexcept
    {
       if (m_ref)
          return CFGetRetainCount(m_ref);
@@ -177,17 +177,17 @@ public:
          return 0;
    }
 
-   explicit operator bool() const noexcept
+   inline explicit operator bool() const noexcept
    {
       return (m_ref != nullptr);
    }
 
-   T get() const noexcept
+   inline T get() const noexcept
    {
       return m_ref;
    }
 
-   void release() noexcept
+   inline void release() noexcept
    {
       if (m_ref)
       {
@@ -204,7 +204,7 @@ private:
 // result of a function creating a new reference (like CFStringCreateCopy), and is therefore a
 // temporary value that needs to be released.
 template<typename T>
-CFReference<T> make_CFReference(T arg) noexcept
+inline CFReference<T> make_CFReference(T arg) noexcept
 {
    CFReference<T> x(arg);
    CFRelease(arg);
@@ -216,23 +216,23 @@ CFReference<T> make_CFReference(T arg) noexcept
 class Base
 {
 public:
-   operator CFTypeRef() const noexcept
+   inline operator CFTypeRef() const noexcept
    {
       return m_ref.get();
    }
 
-   CFTypeID type_id() noexcept
+   inline CFTypeID type_id() noexcept
    {
       return CFGetTypeID(m_ref.get());
    }
 
 protected:
-   Base() noexcept :
+   inline Base() noexcept :
       m_ref()
    { }
 
    template<typename T>
-   Base(const CFReference<T>& ref) :
+   inline Base(const CFReference<T>& ref) :
       m_ref(ref)
    { }
 
